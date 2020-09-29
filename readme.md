@@ -65,10 +65,114 @@ Choose option 'Incremental' by typing 'I'.
 
 Now check the status of cluster by running ```cluster.status()```
 ```
- "status": "OK", 
-  "statusText": "Cluster is ONLINE and can tolerate up to ONE failure.", 
+ "status": "OK_NO_TOLERANCE", 
 ````
 Innodb cluster requires minimum of three instance to be fault tolerant
 
 To add another instance run ```cluster.addInstance("inno@mysql3:3306")```
+Now check the status of cluster by running ```cluster.status()```
+```
+ "status": "OK", 
+````
+Exit Shell.
 
+# Configuring MySQL Router
+
+Run the following commands
+```
+docker run -d --name mysql-router --net=innodbnet \
+   -e MYSQL_HOST=mysql1 \
+   -e MYSQL_PORT=3306 \
+   -e MYSQL_USER=inno \
+   -e MYSQL_PASSWORD=inno \
+   -e MYSQL_INNODB_CLUSTER_MEMBERS=4 \
+   mysql/mysql-router
+   
+  docker logs mysql-router
+ ```
+  Succesfull execution should display Successfully contacted .....## MySQL Classic protocol
+
+- Read/Write Connections: localhost:6446
+- Read/Only Connections:  localhost:6447
+
+# Adding data
+Create a new MySQL 8.0 container named mysql-client which will server as a client:
+```
+$ docker run -d --name=mysql-client --hostname=mysql-client --net=innodbnet \
+   -e MYSQL_ROOT_PASSWORD=root mysql/mysql-server:8.0
+```
+Add some data to the cluster. Point to remember mysql-client uses port : 6446 R/W to be able to write data to seed instance
+```
+$ docker exec -it mysql-client mysql -h mysql-router -P 6446 -uinno -pinno \
+  -e "create database TEST; use TEST; CREATE TABLE t1 (id INT NOT NULL PRIMARY KEY) ENGINE=InnoDB; show tables;" \
+  -e "INSERT INTO TEST.t1 VALUES(1); INSERT INTO TEST.t1 VALUES(2); INSERT INTO TEST.t1 VALUES(3);"
+```
+# Verifying Replication
+To verify replication, login to MySQL as R/O(read-only) instance :
+```
+docker exec -it mysql-client mysql -h mysql-router -P 6447 -uinno -pinno \
+  -e "SELECT * FROM TEST.t1;"
+  ```
+# Fault Tolerance
+To check which instance is running as Primary , run :
+```
+ docker exec -it mysql-client mysqlsh -h mysql-router -P 6447 -uinno -pinno
+\sql
+SELECT MEMBER_HOST, MEMBER_ROLE FROM performance_schema.replication_group_members;
+\exit
+```
+To stop primary instance , run:
+```docker stop primary_name```
+
+What will happen now when primary node is down?
+Run :
+```
+cluster.status()
+```
+The cluster is still up and running, but we will have a new primary, say mysql2. The node mysql1 (seed) is now with status "(MISSING)" and mode "n/a".
+
+Restart the instance , run :
+```
+docker start primary_name
+```
+Run :
+```
+cluster.status()
+```
+The status of instance (primary) will change from RECOVERING - > ONLINE. Now this instance will be a R/O instance.
+
+# Switching between Primary and Multi-Primary Mode
+Primary mode is a single master (R/W) mode, to switch , run:
+```
+docker exec -it mysql-client mysqlsh -h mysql-router -P 6447 -uinno -pinno
+var cluster = dba.getCluster("mycluster")
+cluster.switchToMultiPrimaryMode()
+```
+Run :
+```
+cluster.status()
+```
+To verify check if all instances are running in "R/W" mode.
+
+To switch back to primary , run :
+```
+cluster.switchToSinglePrimaryMode("inno@mysql1:3306");
+```
+
+# Scaling Up
+When adding a new instance, a node has to be provisioned first before it's allowed to participate with the replication group. The provisioning process will be handled automatically by MySQL. Also, you can check the instance state first whether the node is valid to join the cluster by using checkInstanceState() function as previously explained.
+
+To add a new DB node, use the addInstances() function and specify the host:
+```
+cluster.addInstance("inno@mysql4:3306")
+````
+To verify the new cluster size, Run :
+```
+cluster.status()
+```
+
+# Scaling Down
+To remove a node, connect to any of the DB nodes except the one that we are going to remove and use the removeInstance() function with the database instance name:
+```
+cluster.removeInstance("inno@mysql4:3306")
+```

@@ -85,7 +85,7 @@ docker run -d --name mysql-router --net=innodbnet \
    -e MYSQL_PORT=3306 \
    -e MYSQL_USER=inno \
    -e MYSQL_PASSWORD=inno \
-   -e MYSQL_INNODB_CLUSTER_MEMBERS=4 \
+   -e MYSQL_INNODB_CLUSTER_MEMBERS=3 \
    mysql/mysql-router
    
   docker logs mysql-router

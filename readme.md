@@ -108,15 +108,15 @@ $ docker exec -it mysql-client mysql -h mysql-router -P 6446 -uinno -pinno \
   -e "INSERT INTO TEST.t1 VALUES(1); INSERT INTO TEST.t1 VALUES(2); INSERT INTO TEST.t1 VALUES(3);"
 ```
 # Verifying Replication
-To verify replication, login to MySQL as R/O(read-only) instance :
 
 Add new data using R/W port 6446 , run :
 ```
 $ docker exec -it mysql-client mysql -h mysql-router -P 6446 -uinno -pinno \
   -e "use TEST;" \
-  -e "INSERT INTO TEST.t1 VALUES(99);"
+  -e "INSERT INTO TEST.t1 VALUES(919);"
 
 ```
+To verify replication, login to MySQL as R/O(read-only) instance :
 ```
 docker exec -it mysql-client mysql -h mysql-router -P 6447 -uinno -pinno \
   -e "SELECT * FROM TEST.t1;"

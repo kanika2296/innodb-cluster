@@ -116,7 +116,7 @@ docker exec -it mysql-client mysql -h mysql-router -P 6447 -uinno -pinno \
 # Fault Tolerance
 To check which instance is running as Primary , run :
 ```
- docker exec -it mysql-client mysqlsh -h mysql-router -P 6447 -uinno -pinno
+docker exec -it mysql-client mysqlsh -h mysql-router -P 6447 -uinno -pinno
 \sql
 SELECT MEMBER_HOST, MEMBER_ROLE FROM performance_schema.replication_group_members;
 \exit
@@ -127,6 +127,8 @@ To stop primary instance , run:
 What will happen now when primary node is down?
 Run :
 ```
+docker exec -it mysql-client mysqlsh -h mysql-router -P 6447 -uinno -pinno
+var cluster = dba.getCluster("mycluster")
 cluster.status()
 ```
 The cluster is still up and running, but we will have a new primary, say mysql2. The node mysql1 (seed) is now with status "(MISSING)" and mode "n/a".

@@ -115,8 +115,7 @@ Add new data using R/W port 6446 , run :
 $ docker exec -it mysql-client mysql -h mysql-router -P 6446 -uinno -pinno \
   -e "use TEST;" \
   -e "INSERT INTO TEST.t1 VALUES(99);"
-  
- \exit
+
 ```
 ```
 docker exec -it mysql-client mysql -h mysql-router -P 6447 -uinno -pinno \
